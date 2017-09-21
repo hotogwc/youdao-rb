@@ -1,13 +1,17 @@
 require "faraday"
 require "digest"
 require "faraday_middleware"
+require "youdao/rb/secret_service"
 
-AppID = "54011682991896b1"
-Key = "txAnJPdqFhzCpaWK2aeaqMd7tKIFpQvA"
+class YoudaoRBError < StandardError
+end
 class LookupService
   def self.translate word
     salt = rand(1..100).to_s
-    str = AppID + word + salt + Key
+    app_id = SecretService.app_id
+    key = SecretService.key
+    raise YoudaoRBError, "AppID or Key is blank, please set using config command" if app_id.nil? || key.nil?
+    str = app_id + word + salt + key
     sign = Digest::MD5.hexdigest(str)
     conn = Faraday.new(:url => 'http://openapi.youdao.com') do |faraday|
       faraday.request  :url_encoded
@@ -22,7 +26,7 @@ class LookupService
     response = conn.get '/api', { :q => word,
                                   :from => from,
                                   :to => to,
-                                  :appKey => AppID,
+                                  :appKey => app_id,
                                   :salt => salt,
                                   :sign => sign }
 
